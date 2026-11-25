@@ -1,0 +1,31 @@
+# Secretos y variables de entorno (Zero-Leak Policy)
+.env
+.env.*
+!.env.example
+
+# Directorios de datos e imágenes (Inmutabilidad y Privacidad)
+input/
+output/
+
+# Entornos virtuales y paquetes
+.venv/
+venv/
+ENV/
+
+# Caché de Python y herramientas
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Distribución y empaquetado
+dist/
+build/
+*.egg-info/
+
+# Archivos de sistema operativo e IDE
+.DS_Store
+Thumbs.db

@@ -1,0 +1,41 @@
+[project]
+name = "pixelforge"
+version = "0.1.0"
+description = "Pipeline local y seguro de procesamiento de imágenes por lotes con IA (Gemini) y compilador de galería estática."
+requires-python = ">=3.12"
+dependencies = [
+    "google-genai>=1.0.0",
+    "jinja2>=3.1.4",
+    "pillow>=11.0.0",
+    "pydantic>=2.10.0",
+    "python-dotenv>=1.0.1",
+]
+
+[project.scripts]
+pixelforge = "pixelforge.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "ruff>=0.8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pixelforge"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

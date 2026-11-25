@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self';">
+  <title>PixelForge — Galería Inteligente</title>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-card: #1e293b;
+      --bg-card-hover: #26354d;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --border: #334155;
+      --chip-bg: #0f172a;
+      --success: #34d399;
+      --error: #f87171;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 2.25rem 1.5rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0) 100%);
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.4rem;
+    }
+
+    header h1 span {
+      color: var(--accent);
+    }
+
+    header p.subtitle {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .upload-section {
+      max-width: 760px;
+      width: 100%;
+      margin: 1.5rem auto 0.5rem;
+      padding: 0 1.5rem;
+    }
+
+    .upload-dropzone {
+      background-color: rgba(30, 41, 59, 0.75);
+      border: 2px dashed var(--border);
+      border-radius: 0.9rem;
+      padding: 1.35rem 1.5rem;
+      text-align: center;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .upload-dropzone.dragover {
+      border-color: var(--accent);
+      background-color: rgba(56, 189, 248, 0.1);
+    }
+
+    .upload-btn {
+      background-color: var(--accent);
+      color: #0f172a;
+      border: none;
+      padding: 0.6rem 1.3rem;
+      border-radius: 9999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .upload-btn:hover {
+      background-color: var(--accent-hover);
+      color: var(--text-primary);
+    }
+
+    .upload-btn:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .upload-hint {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    .upload-status {
+      font-size: 0.86rem;
+      font-weight: 500;
+      min-height: 1.3rem;
+    }
+
+    .upload-status.ok {
+      color: var(--success);
+    }
+
+    .upload-status.err {
+      color: var(--error);
+    }
+
+    .filter-bar {
+      max-width: 1280px;
+      margin: 1rem auto 0.5rem;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .filter-btn {
+      background-color: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      padding: 0.45rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+      background-color: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    main {
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem;
+      flex: 1;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card:hover,
+    .card:focus-visible {
+      transform: translateY(-4px);
+      background-color: var(--bg-card-hover);
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    .card.hidden {
+      display: none;
+    }
+
+    .thumb-wrapper {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      background-color: #090d16;
+      position: relative;
+    }
+
+    .thumb-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.35s ease;
+    }
+
+    .card:hover .thumb-wrapper img {
+      transform: scale(1.04);
+    }
+
+    .card-body {
+      padding: 1rem 1.15rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex: 1;
+    }
+
+    .card-title {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-desc {
+      font-size: 0.92rem;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .tag-chip {
+      background-color: var(--chip-bg);
+      color: var(--accent);
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 9999px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3.5rem 1rem;
+      color: var(--text-secondary);
+    }
+
+    /* Lightbox Modal */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(9, 13, 22, 0.92);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      z-index: 1000;
+    }
+
+    .lightbox.open {
+      display: flex;
+    }
+
+    .lightbox-content {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      max-width: 1024px;
+      width: 100%;
+      max-height: 92vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 0.85rem;
+      right: 0.85rem;
+      background-color: rgba(15, 23, 42, 0.85);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 9999px;
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lightbox-close:hover {
+      background-color: var(--accent);
+      color: #0f172a;
+    }
+
+    .lightbox-image-wrap {
+      background-color: #05080f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-height: 70vh;
+      overflow: hidden;
+    }
+
+    .lightbox-image-wrap img {
+      max-width: 100%;
+      max-height: 70vh;
+      object-fit: contain;
+      display: block;
+    }
+
+    .lightbox-details {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .lightbox-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .lightbox-desc {
+      font-size: 1rem;
+      color: var(--text-primary);
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Pixel<span>Forge</span></h1>
+    <p class="subtitle">{{ total_count }} imagen(es) procesadas con viñeta, watermark ({{ watermark_text }}) y análisis visual</p>
+  </header>
+
+  <section class="upload-section" aria-label="Subir nuevas imágenes">
+    <div class="upload-dropzone" id="uploadDropzone">
+      <input
+        type="file"
+        id="fileInput"
+        accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+        multiple
+        hidden
+      >
+      <button type="button" class="upload-btn" id="uploadBtn">+ Subir Imágenes (JPG / PNG)</button>
+      <p class="upload-hint">Arrastra tus fotos aquí o haz clic en el botón &mdash; Se aplicará viñeta, watermark, limpieza EXIF y thumbnail 300x300 automáticamente</p>
+      <p class="upload-status" id="uploadStatus" aria-live="polite"></p>
+    </div>
+  </section>
+
+  {% if all_tags %}
+  <nav class="filter-bar" aria-label="Filtros por etiqueta">
+    <button type="button" class="filter-btn active" data-filter="all">Todas ({{ total_count }})</button>
+    {% for tag in all_tags %}
+    <button type="button" class="filter-btn" data-filter="{{ tag }}">#{{ tag }}</button>
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  <main>
+    {% if items %}
+    <section class="gallery-grid" id="galleryGrid">
+      {% for item in items %}
+      <article
+        class="card"
+        tabindex="0"
+        role="button"
+        aria-label="Ver {{ item.filename }}"
+        data-image="{{ item.image_rel_path }}"
+        data-filename="{{ item.filename }}"
+        data-description="{{ item.description }}"
+        data-dimensions="{{ item.width }}x{{ item.height }} px"
+        data-tags="{{ item.tags | join(',') }}"
+      >
+        <div class="thumb-wrapper">
+          <img
+            src="{{ item.thumb_rel_path }}"
+            alt="{{ item.description }}"
+            width="300"
+            height="300"
+            loading="lazy"
+            decoding="async"
+          >
+        </div>
+        <div class="card-body">
+          <div class="card-title">{{ item.filename }} ({{ item.width }}x{{ item.height }})</div>
+          <p class="card-desc">{{ item.description }}</p>
+          <div class="tag-list">
+            {% for tag in item.tags %}
+            <span class="tag-chip">#{{ tag }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </section>
+    {% else %}
+    <div class="empty-state">
+      <p>No hay imágenes todavía. Usa el botón "+ Subir Imágenes (JPG / PNG)" de arriba para procesar tu primera foto.</p>
+    </div>
+    {% endif %}
+  </main>
+
+  <div class="lightbox" id="lightboxModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="lightbox-content">
+      <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Cerrar">&times;</button>
+      <div class="lightbox-image-wrap">
+        <img id="lightboxImg" src="" alt="">
+      </div>
+      <div class="lightbox-details">
+        <div class="lightbox-meta">
+          <span id="lightboxFilename"></span>
+          <span id="lightboxDimensions"></span>
+        </div>
+        <p class="lightbox-desc" id="lightboxDesc"></p>
+        <div class="tag-list" id="lightboxTags"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Generado estáticamente por PixelForge &mdash; Zero-EXIF &bull; Zero-Leak &bull; Autoescaped
+  </footer>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const filterButtons = document.querySelectorAll(".filter-btn");
+      const cards = document.querySelectorAll(".card");
+      const modal = document.getElementById("lightboxModal");
+      const closeBtn = document.getElementById("lightboxClose");
+      const modalImg = document.getElementById("lightboxImg");
+      const modalFilename = document.getElementById("lightboxFilename");
+      const modalDimensions = document.getElementById("lightboxDimensions");
+      const modalDesc = document.getElementById("lightboxDesc");
+      const modalTags = document.getElementById("lightboxTags");
+
+      const uploadDropzone = document.getElementById("uploadDropzone");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const fileInput = document.getElementById("fileInput");
+      const uploadStatus = document.getElementById("uploadStatus");
+
+      function setStatus(message, type) {
+        if (!uploadStatus) return;
+        uploadStatus.textContent = message;
+        uploadStatus.className = "upload-status" + (type ? " " + type : "");
+      }
+
+      async function handleFilesUpload(fileList) {
+        if (!fileList || fileList.length === 0) return;
+        if (uploadBtn) uploadBtn.disabled = true;
+
+        let uploadedCount = 0;
+        for (let i = 0; i < fileList.length; i++) {
+          const file = fileList[i];
+          setStatus(
+            "Procesando (" + (i + 1) + "/" + fileList.length + "): " + file.name + "...",
+            ""
+          );
+          try {
+            const response = await fetch("/upload", {
+              method: "POST",
+              headers: {
+                "Content-Type": file.type || "application/octet-stream",
+                "X-Filename": encodeURIComponent(file.name)
+              },
+              body: file
+            });
+            const result = await response.json();
+            if (!response.ok || !result.ok) {
+              setStatus("Error en " + file.name + ": " + (result.error || "Fallo al subir"), "err");
+              if (uploadBtn) uploadBtn.disabled = false;
+              return;
+            }
+            uploadedCount++;
+          } catch (err) {
+            setStatus(
+              "No se pudo conectar al servidor local (ejecuta: uv run pixelforge --offline --serve).",
+              "err"
+            );
+            if (uploadBtn) uploadBtn.disabled = false;
+            return;
+          }
+        }
+
+        if (uploadedCount > 0) {
+          setStatus("¡" + uploadedCount + " imagen(es) procesada(s)! Actualizando galería...", "ok");
+          window.location.reload();
+        }
+      }
+
+      if (uploadBtn && fileInput) {
+        uploadBtn.addEventListener("click", function () {
+          fileInput.click();
+        });
+        fileInput.addEventListener("change", function () {
+          handleFilesUpload(fileInput.files);
+        });
+      }
+
+      if (uploadDropzone) {
+        uploadDropzone.addEventListener("dragover", function (ev) {
+          ev.preventDefault();
+          uploadDropzone.classList.add("dragover");
+        });
+        uploadDropzone.addEventListener("dragleave", function () {
+          uploadDropzone.classList.remove("dragover");
+        });
+        uploadDropzone.addEventListener("drop", function (ev) {
+          ev.preventDefault();
+          uploadDropzone.classList.remove("dragover");
+          if (ev.dataTransfer && ev.dataTransfer.files) {
+            handleFilesUpload(ev.dataTransfer.files);
+          }
+        });
+      }
+
+      filterButtons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          const selected = btn.getAttribute("data-filter") || "all";
+
+          filterButtons.forEach(function (b) {
+            b.classList.toggle("active", b === btn);
+          });
+
+          cards.forEach(function (card) {
+            const rawTags = card.getAttribute("data-tags") || "";
+            const tagArray = rawTags ? rawTags.split(",") : [];
+            const visible = selected === "all" || tagArray.indexOf(selected) !== -1;
+            card.classList.toggle("hidden", !visible);
+          });
+        });
+      });
+
+      function openLightbox(card) {
+        const imgSrc = card.getAttribute("data-image") || "";
+        const filename = card.getAttribute("data-filename") || "";
+        const desc = card.getAttribute("data-description") || "";
+        const dims = card.getAttribute("data-dimensions") || "";
+        const rawTags = card.getAttribute("data-tags") || "";
+
+        modalImg.setAttribute("src", imgSrc);
+        modalImg.setAttribute("alt", desc);
+        modalFilename.textContent = filename;
+        modalDimensions.textContent = dims;
+        modalDesc.textContent = desc;
+
+        while (modalTags.firstChild) {
+          modalTags.removeChild(modalTags.firstChild);
+        }
+
+        if (rawTags) {
+          rawTags.split(",").forEach(function (t) {
+            if (!t) return;
+            const span = document.createElement("span");
+            span.className = "tag-chip";
+            span.textContent = "#" + t;
+            modalTags.appendChild(span);
+          });
+        }
+
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+      }
+
+      function closeLightbox() {
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+        modalImg.setAttribute("src", "");
+      }
+
+      cards.forEach(function (card) {
+        card.addEventListener("click", function () {
+          openLightbox(card);
+        });
+        card.addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter" || ev.key === " ") {
+            ev.preventDefault();
+            openLightbox(card);
+          }
+        });
+      });
+
+      if (closeBtn) {
+        closeBtn.addEventListener("click", closeLightbox);
+      }
+
+      if (modal) {
+        modal.addEventListener("click", function (ev) {
+          if (ev.target === modal) {
+            closeLightbox();
+          }
+        });
+      }
+
+      document.addEventListener("keydown", function (ev) {
+        if (ev.key === "Escape" && modal && modal.classList.contains("open")) {
+          closeLightbox();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
