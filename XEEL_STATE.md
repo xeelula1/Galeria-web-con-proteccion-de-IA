@@ -20,7 +20,7 @@
 - **`pydantic` (2.14.4):** Validación estricta en tiempo de ejecución (`AIDescription`) y protección de secretos con `SecretStr`.
 - **`python-dotenv` (1.2.4):** Lectura aislada de `.env` (`dotenv_values`) sin contaminar el entorno del sistema operativo.
 - **`pillow` (13.0.0):** Pipeline gráfico en memoria (`RGBA`/`RGB`), thumbnail `300x300`, viñeta radial, watermark `"© PixelForge"` y eliminación 100% de metadatos EXIF.
-- **`google-genai` (3.6.1):** SDK oficial de Google GenAI (`gemini-2.5-flash`) con *Structured Outputs*, reintento acotado y redacción automática de credenciales en logs.
+- **`google-genai` (3.6.1):** SDK oficial de Google GenAI con cadena de alta disponibilidad (`gemini-3.5-flash-lite` + `gemini-3.8-flash`), *Structured Outputs*, reintento inteligente ante picos `503` y redacción automática de credenciales en logs.
 - **`jinja2` (3.1.6):** Motor de plantillas con `select_autoescape(("html", "htm", "xml", "j2"), default=True)` activo contra XSS.
 - **`http.server` (`ThreadingHTTPServer`):** Servidor local enlazado estrictamente a `127.0.0.1` con soporte de subida interactiva `POST /upload`.
 - **`ruff` (0.17.6) + `pytest` (9.2.0):** Linter/formateador y suite de 16 pruebas unitarias y de ciberseguridad.
@@ -45,11 +45,12 @@ pixelforge/
 └── src/
     └── pixelforge/
         ├── __init__.py       — Inicialización y versión del paquete (0.1.0)
+        ├── __main__.py       — Soporte para ejecución como módulo (python -m pixelforge)
         ├── models.py         — Contratos de datos inmutables (@dataclass) y validados (Pydantic)
         ├── config.py         — Carga segura de .env (SecretStr) y defensa contra Path Traversal
         ├── scanner.py        — Escáner de input/ por magic bytes, integridad Pillow y hash SHA-256
         ├── processor.py      — Pipeline gráfico en memoria (resize, thumb 300x300, viñeta, watermark, 0 EXIF)
-        ├── ai_describer.py   — Cliente aislado de Gemini (gemini-2.5-flash) con fallback y protección Zero-Leak
+        ├── ai_describer.py   — Cliente aislado de Gemini (gemini-3.5-flash-lite / 3.8-flash) con fallback y Zero-Leak
         ├── builder.py        — Compilador Jinja2 con autoescape forzado (.j2) hacia output/index.html
         └── cli.py            — Orquestador CLI, servidor local 127.0.0.1 y subida web segura (POST /upload)
 

@@ -1,7 +1,8 @@
-"""Cliente aislado de visión IA con Google GenAI (gemini-2.5-flash) y fallback automático."""
+"""Cliente aislado de visión IA con Google GenAI (gemini-3.8-flash) y fallback automático."""
 
 import json
 import logging
+import time
 from typing import Any
 
 from google import genai
@@ -12,7 +13,12 @@ from pixelforge.models import AIDescription, AppConfig, ProcessedImage
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.5-flash-lite"
+FALLBACK_MODELS = (
+    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
+)
 VISION_PROMPT = (
     "Analiza esta imagen y devuelve un objeto JSON con:\n"
     "- 'description': descripción visual concisa y atractiva en español (máximo 280 caracteres).\n"
@@ -91,7 +97,7 @@ def describe_image(
     client: Any | None = None,
     max_retries: int = 1,
 ) -> AIDescription:
-    """Genera descripción y etiquetas usando gemini-2.5-flash o aplica fallback seguro."""
+    """Genera descripción y etiquetas usando gemini-3.8-flash o aplica fallback seguro."""
     if config.offline or config.gemini_api_key is None:
         return build_fallback_description(processed.source_filename)
 
@@ -126,10 +132,13 @@ def describe_image(
     )
 
     attempts = max(1, max_retries + 1)
-    for attempt in range(1, attempts + 1):
+    candidate_models = FALLBACK_MODELS if client is None else (DEFAULT_MODEL,) * attempts
+    total_tries = len(candidate_models) if client is None else attempts
+
+    for attempt, model_name in enumerate(candidate_models[:total_tries], start=1):
         try:
             response = active_client.models.generate_content(
-                model=DEFAULT_MODEL,
+                model=model_name,
                 contents=[image_part, VISION_PROMPT],
                 config=gen_config,
             )
@@ -138,26 +147,31 @@ def describe_image(
         except (json.JSONDecodeError, ValidationError, ValueError) as parse_exc:
             safe_msg = sanitize_secret_from_text(str(parse_exc), config.gemini_api_key)
             logger.warning(
-                "Respuesta JSON inválida de Gemini para '%s': %s",
+                "Respuesta JSON inválida de Gemini (%s) para '%s': %s",
+                model_name,
                 processed.source_filename,
                 safe_msg,
             )
             return build_fallback_description(processed.source_filename)
         except Exception as net_exc:
             safe_msg = sanitize_secret_from_text(str(net_exc), config.gemini_api_key)
-            if attempt < attempts:
+            if attempt < total_tries:
                 logger.warning(
-                    "Fallo temporal en Gemini para '%s' (intento %d/%d): %s. Reintentando...",
+                    "Fallo temporal en Gemini (%s) para '%s' (intento %d/%d): %s. "
+                    "Saltando al siguiente modelo disponible...",
+                    model_name,
                     processed.source_filename,
                     attempt,
-                    attempts,
+                    total_tries,
                     safe_msg,
                 )
+                if client is None:
+                    time.sleep(1.0)
                 continue
             logger.warning(
                 "Fallo definitivo en Gemini para '%s' tras %d intento(s): %s. Usando fallback.",
                 processed.source_filename,
-                attempts,
+                total_tries,
                 safe_msg,
             )
 
